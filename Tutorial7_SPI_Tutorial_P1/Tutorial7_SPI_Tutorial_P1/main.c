@@ -122,7 +122,7 @@ static void drawMap() {
 }
 
 static void checkAccuracy() {
-	if (shipCoordinates[yCoordinate-1][xCoordinate-1] == 1) {
+	if (shipCoordinates[yCoordinate-1][xCoordinate-1] == 1 && hitCoordinates[yCoordinate-1][xCoordinate-1] == 0) {
 		hitCoordinates[yCoordinate-1][xCoordinate-1] = 1;
 		hit++;
 	}
