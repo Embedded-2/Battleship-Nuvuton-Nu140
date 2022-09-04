@@ -21,7 +21,7 @@
 
 enum Boolean{true, false};
 enum CoordinateType{x, y};							
-enum Stage{Welcome, ChooseCoordinate, Shoot, CheckHit, GameOver};
+enum Stage{Welcome, ChooseCoordinate, Shoot, GameOver};
 
 int pattern[] = {
                //   gedbaf_dot_c
@@ -62,6 +62,11 @@ volatile int hitCoordinates[8][8] = {{0, 0, 0, 0, 0, 0, 0, 0},
 																			{0, 0, 0, 0, 0, 0, 0, 0},
 																			{0, 0, 0, 0, 0, 0, 0, 0}};
 
+volatile int count = 0;
+enum Boolean endGame = false;
+volatile int max;			
+
+//--------------------functions-------------------------------------
 void System_Config(void);
 void SPI3_Config(void);
 void Input_Config(void);
@@ -77,91 +82,13 @@ static void printLCD(char text[]);
 static void search_col1(void);
 static void search_col2(void);
 static void search_col3(void);
-static void shoot();
-																			
-static void turnOffShootCounter() {
-	PC->DOUT &= ~(0xF<<4); //reset 7 segment
-	TIMER1->TCSR &= ~(1 << 30);// stop timer 1
-}
-
-static void resetCoordinate() {
-	xCoordinate = 0; //reset coordinate value
-	yCoordinate = 0;
-	currCoordinateType = x;// change coordinate type back to x
-}
-
-static void resetGame() {
-	//reset hit map
-	for (int column = 0; column<8;column++) {
-		for(int row = 0; row<8;row++) {
-			hitCoordinates[column][row] = 0;
-		}
-	}
-	hit = 0;
-	shootCounter[0] = 0;
-	shootCounter[1] = 0;
-}
-
-static void drawMap() {
-	LCD_clear(); 
-	int16_t x = 0;
-	int16_t y = 0;
-	for (int column = 0; column<8;column++) {
-		for(int row = 0; row<8;row++) {
-			if (hitCoordinates[column][row] == 1) {
-				printS_5x7(x, y, "x");
-			} else {
-				printS_5x7(x, y, "-");
-			}
-			x+=10;
-		}
-		y+=8;
-		x=0;
-	}
-	CLK_SysTickDelay(BOUNCING_DLY/2);
-}
-
-static void checkAccuracy() {
-	if (shipCoordinates[yCoordinate-1][xCoordinate-1] == 1 && hitCoordinates[yCoordinate-1][xCoordinate-1] == 0) {
-		hitCoordinates[yCoordinate-1][xCoordinate-1] = 1;
-		hit++;
-	}
-}
-
-void EINT1_IRQHandler(void){
-	//Do some action
-	
-	switch(stage) {
-			case Welcome:
-				resetGame();
-				stage = ChooseCoordinate;
-				break;
-			case ChooseCoordinate:
-				if (xCoordinate != 0 && yCoordinate != 0) {
-					shoot();
-					stage = Shoot;
-				}
-				break;
-			case Shoot:
-				if((shootCounter[0] == 1 && shootCounter[1] == 6) || hit == 10) {
-					stage = GameOver;
-				} else {
-					stage = ChooseCoordinate;	
-				}
-				turnOffShootCounter();
-				resetCoordinate();
-				break;
-			case GameOver:
-				stage = Welcome;
-				break;
-			default:
-				break;
-	}
-	
-	PB->ISRC |= (1 << 15);
-}
-
-
+static void shoot(void);
+static void turnOffTimer1(void);
+static void resetCoordinate(void);
+static void resetGame(void);
+static void drawMap(void);
+static void checkAccuracy(void);
+static void turnOffTimer0(void);
 
 int main(void)
 {
@@ -222,7 +149,10 @@ int main(void)
 
 void Output_Config(void) {
 	PC->PMD &= ~(0b11<<24); // Clear bits
-	PC->PMD |= (0b01<<24); // output
+	PC->PMD |= (0b01<<24); // gpc12
+	
+	PB->PMD &= ~(0b11<<22); // Clear bits
+	PB->PMD |= (0b01<<22); // buzzer
 }
 
 void Input_Config(void) {
@@ -300,8 +230,33 @@ void System_Config(void) {
 	TIMER1->TCMPR = 1200-1; // 0.0001/(1/12MHz)
 	
 	//TIMER1->TCSR |= (1 << 30);
+	
+	//--------------Timer 0 configuration-------------------------
+	CLK->CLKSEL1 &= ~(0b111 << 12);//12MHz
+	CLK->APBCLK |= (1 << 2); //Enable clock source
 
-	SYS_LockReg();  // Lock protected registers
+	TIMER0->TCSR &= ~(0xFF << 0);//prescaler = 0
+	
+	//reset Timer 0
+	TIMER0->TCSR |= (1 << 26);
+	
+	//define Timer 0 operation mode
+	TIMER0->TCSR &= ~(0b11 << 27);
+	TIMER0->TCSR |= (0b01 << 27); //periodic mode
+	TIMER0->TCSR &= ~(1 << 24);
+	
+	//TDR to be updated continuously while timer counter is counting
+	TIMER0->TCSR |= (1 << 16);
+	
+	//TImer interrupt
+	//Trigger compare match flag
+	TIMER0->TCSR |= (1 << 29);
+	NVIC->ISER[0] |= 1<<8; //Timer 0 is given number 8 in the vecter table (section 5.2.7)
+	NVIC->IP[2] &= ~(0b11<<6); //Set priority level
+	
+	TIMER0->TCMPR = 12000000-1; // 1/(1/12MHz)
+
+	SYS_LockReg();  // Lock protected registers	
 }
 
 void SPI3_Config(void) {
@@ -370,15 +325,67 @@ void LCD_SetAddress(uint8_t PageAddr, uint8_t ColumnAddr)
 	LCD_command(0x00 | (ColumnAddr & 0xF));
 }
 
+// TImer 0 interrupt
+void TMR0_IRQHandler(void) {
+	if (max == 6 && count < max) {
+		PC->DOUT ^= (1<<12); //Toggle gpc12
+		count++;
+	} else if (max == 10 && count<max) {
+		PB->DOUT ^= (1<<11); //Toggle buzzer
+		count++;
+	} else {
+		turnOffTimer0();
+	}
+	//Toggle led 6 times
+	TIMER0->TISR |= (1<<0); 
+}
+
+//Timer 1 interrupt
 void TMR1_IRQHandler(void)
 {
-	//PC->DOUT ^= 1<<12;
 	(showU13 == true) ? (show7Segment(U13_SEG, shootCounter[0])) : (show7Segment(U14_SEG, shootCounter[1]));
 	(showU13 == true) ? (showU13 = false) : (showU13 = true);
 	TIMER1->TISR |= (1<<0); 
 }
 
-//------------------------------------------Functions-----------------------------------------------------------
+// GPB 15 interrupt
+void EINT1_IRQHandler(void){
+	//Do some action
+	switch(stage) {
+			case Welcome:
+				resetGame();
+				stage = ChooseCoordinate;
+				break;
+			case ChooseCoordinate:
+				if (xCoordinate != 0 && yCoordinate != 0) {
+					shoot();
+					stage = Shoot;
+				}
+				break;
+			case Shoot:
+				turnOffTimer1();
+				resetCoordinate();
+				turnOffTimer0();
+				if((shootCounter[0] == 1 && shootCounter[1] == 6) || hit == 10) {
+					max = 10;
+					TIMER0->TCSR |= (1 << 30); //start timer 0
+					stage = GameOver;
+				} else {
+					stage = ChooseCoordinate;	
+				}
+				break;
+			case GameOver:
+				turnOffTimer0();
+				stage = Welcome;
+				break;
+			default:
+				break;
+	}
+	
+	PB->ISRC |= (1 << 15);
+}
+
+//------------------------------------------Functions definition-----------------------------------------------------------
 static void show7Segment(int ledNo, int number) {
 	// Control which led to turn on
 	PC->DOUT &= ~(0xF<<4);
@@ -500,7 +507,7 @@ static void search_col3(void) {
 	}
 }	
 
-static void handleShootCounter() {
+static void handleShootCounter(void) {
 	shootCounter[1]++;
 	if(shootCounter[1] == 10) {
 		shootCounter[0]++;
@@ -508,10 +515,69 @@ static void handleShootCounter() {
 	}
 }
 
-static void shoot() {
+static void shoot(void) {
 	handleShootCounter();
 	checkAccuracy();
-	TIMER1->TCSR |= (1 << 30);
+	TIMER1->TCSR |= (1 << 30);//turn on timer 1
+}
+
+static void turnOffTimer1(void) {
+	PC->DOUT &= ~(0xF<<4); //reset 7 segment
+	TIMER1->TCSR &= ~(1 << 30);// stop timer 1
+}
+
+static void resetCoordinate(void) {
+	xCoordinate = 0; //reset coordinate value
+	yCoordinate = 0;
+	currCoordinateType = x;// change coordinate type back to x
+}
+
+static void resetGame(void) {
+	//reset hit map
+	for (int column = 0; column<8;column++) {
+		for(int row = 0; row<8;row++) {
+			hitCoordinates[column][row] = 0;
+		}
+	}
+	hit = 0;
+	shootCounter[0] = 0;
+	shootCounter[1] = 0;
+}
+
+static void drawMap(void) {
+	LCD_clear(); 
+	int16_t x = 0;
+	int16_t y = 0;
+	for (int column = 0; column<8;column++) {
+		for(int row = 0; row<8;row++) {
+			if (hitCoordinates[column][row] == 1) {
+				printS_5x7(x, y, "x");
+			} else {
+				printS_5x7(x, y, "-");
+			}
+			x+=10;
+		}
+		y+=8;
+		x=0;
+	}
+	CLK_SysTickDelay(BOUNCING_DLY/2);
+}
+
+static void checkAccuracy(void) {
+	if (shipCoordinates[yCoordinate-1][xCoordinate-1] == 1 && hitCoordinates[yCoordinate-1][xCoordinate-1] == 0) {
+		hitCoordinates[yCoordinate-1][xCoordinate-1] = 1;
+		hit++;
+		max = 6;
+		TIMER0->TCSR |= (1 << 30); //start timer 0
+	}
+}
+
+static void turnOffTimer0(void) {
+	max = 0;
+	count = 0;
+	TIMER0->TCSR &= ~(1 << 30);
+	PC->DOUT |= (1<<12);
+	PB->DOUT |= (1<<11);
 }
 
 
