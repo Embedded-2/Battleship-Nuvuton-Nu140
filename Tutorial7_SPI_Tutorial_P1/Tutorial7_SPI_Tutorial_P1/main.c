@@ -21,7 +21,7 @@
 
 enum Boolean{true, false};
 enum CoordinateType{x, y};							
-enum Stage{Welcome, ChooseCoordinate, Shoot, GameOver};
+enum Stage{Welcome, LoadMap,ChooseCoordinate, Shoot, GameOver};
 
 int pattern[] = {
                //   gedbaf_dot_c
@@ -63,14 +63,19 @@ volatile int hitCoordinates[8][8] = {{0, 0, 0, 0, 0, 0, 0, 0},
 																			{0, 0, 0, 0, 0, 0, 0, 0}};
 
 volatile int count = 0;
-enum Boolean endGame = false;
 volatile int max;			
 
-//--------------------functions-------------------------------------
+volatile char receivedByte;
+enum Boolean loadedMap = false;
+volatile int column = 0;
+volatile int row = 0;
+																			
+//--------------------functions declaration-------------------------------------
 void System_Config(void);
 void SPI3_Config(void);
 void Input_Config(void);
 void Output_Config(void);
+void UART0_Config(void);
 
 void LCD_start(void);
 void LCD_command(unsigned char temp);
@@ -89,6 +94,8 @@ static void resetGame(void);
 static void drawMap(void);
 static void checkAccuracy(void);
 static void turnOffTimer0(void);
+static void drawShipMap(void);
+
 
 int main(void)
 {
@@ -100,6 +107,7 @@ int main(void)
 	//System initialization
 	//--------------------------------
 	System_Config();
+	UART0_Config();
 
 	//--------------------------------
 	//SPI3 initialization
@@ -116,6 +124,34 @@ int main(void)
 		switch(stage) {
 			case Welcome:
 				printLCD("Welcome to the game");
+				break;
+			case LoadMap:
+				while(!(UART0->FSR & (0x01 << 14))) {
+					receivedByte = UART0->DATA; // receive data
+					if (loadedMap == false) {loadedMap = true;}
+					if (receivedByte == '0') {
+						shipCoordinates[row][column] = 0;
+						column++;
+						if(column == 8) {
+							column = 0;
+							row++;
+						}
+					} else if (receivedByte == '1') {
+						shipCoordinates[row][column] = 1;
+						column++;
+						if(column == 8) {
+							column = 0;
+							row++;
+						}
+					}
+				}
+		
+				if (loadedMap == true) {
+					//printLCD("Loaded map successfully");
+					drawShipMap();
+				} else {
+					printLCD("Insert your map");
+				}
 				break;
 			case ChooseCoordinate:
 				drawMap();
@@ -255,8 +291,38 @@ void System_Config(void) {
 	NVIC->IP[2] &= ~(0b11<<6); //Set priority level
 	
 	TIMER0->TCMPR = 12000000-1; // 1/(1/12MHz)
+	
+	//-------------------------UART0 Clock selection and configuration---------------------------------------
+	CLK->CLKSEL1 |= (0b11 << 24); // UART0 clock source is 22.1184 MHz
+	CLK->CLKDIV &= ~(0xF << 8); // clock divider is 1
+	CLK->APBCLK |= (1 << 16); // enable UART0 clock
 
 	SYS_LockReg();  // Lock protected registers	
+}
+
+void UART0_Config(void) {
+	// UART0 pin configuration. PB.1 pin is for UART0 TX
+	PB->PMD &= ~(0b11 << 2);
+	PB->PMD |= (0b01 << 2); // PB.1 is output pin
+	SYS->GPB_MFP |= (1 << 1); // GPB_MFP[1] = 1 -> PB.1 is UART0 TX pin
+	
+	SYS->GPB_MFP |= (1 << 0); // GPB_MFP[0] = 1 -> PB.0 is UART0 RX pin	
+	PB->PMD &= ~(0b11 << 0);	// Set Pin Mode for GPB.0(RX - Input)
+
+	// UART0 operation configuration
+	UART0->LCR |= (0b11 << 0); // 8 data bit
+	UART0->LCR &= ~(1 << 2); // one stop bit	
+	UART0->LCR &= ~(1 << 3); // no parity bit
+	UART0->FCR |= (1 << 1); // clear RX FIFO
+	UART0->FCR |= (1 << 2); // clear TX FIFO
+	UART0->FCR &= ~(0xF << 16); // FIFO Trigger Level is 1 byte]
+	UART0->FCR |= (0b0001 << 16);
+	
+	//Baud rate config: BRD/A = 1, DIV_X_EN=0
+	//--> Mode 0, Baud rate = UART_CLK/[16*(A+2)] = 22.1184 MHz/[16*(1+2)]= 460800 bps
+	UART0->BAUD &= ~(0b11 << 28); // mode 0	
+	UART0->BAUD &= ~(0xFFFF << 0);
+	UART0->BAUD |= 142;
 }
 
 void SPI3_Config(void) {
@@ -354,6 +420,9 @@ void EINT1_IRQHandler(void){
 	switch(stage) {
 			case Welcome:
 				resetGame();
+				stage = LoadMap;
+				break;
+			case LoadMap:
 				stage = ChooseCoordinate;
 				break;
 			case ChooseCoordinate:
@@ -521,7 +590,7 @@ static void shoot(void) {
 	TIMER1->TCSR |= (1 << 30);//turn on timer 1
 }
 
-static void turnOffTimer1(void) {
+static void turnOffTimer1(void) { //turn off 7 segment timer
 	PC->DOUT &= ~(0xF<<4); //reset 7 segment
 	TIMER1->TCSR &= ~(1 << 30);// stop timer 1
 }
@@ -534,23 +603,30 @@ static void resetCoordinate(void) {
 
 static void resetGame(void) {
 	//reset hit map
-	for (int column = 0; column<8;column++) {
-		for(int row = 0; row<8;row++) {
-			hitCoordinates[column][row] = 0;
+	for (int i = 0; i<8;i++) {
+		for(int j = 0; j<8;j++) {
+			hitCoordinates[i][j] = 0;
+			shipCoordinates[i][j] = 0;
 		}
 	}
+	//reset number of hits and shoots
 	hit = 0;
 	shootCounter[0] = 0;
 	shootCounter[1] = 0;
+	
+	//reset map loading variables
+	loadedMap = false;
+	column = 0;
+	row = 0;
 }
 
 static void drawMap(void) {
 	LCD_clear(); 
 	int16_t x = 0;
 	int16_t y = 0;
-	for (int column = 0; column<8;column++) {
-		for(int row = 0; row<8;row++) {
-			if (hitCoordinates[column][row] == 1) {
+	for (int i = 0; i<8;i++) {
+		for(int j = 0; j<8;j++) {
+			if (hitCoordinates[i][j] == 1) {
 				printS_5x7(x, y, "x");
 			} else {
 				printS_5x7(x, y, "-");
@@ -572,12 +648,30 @@ static void checkAccuracy(void) {
 	}
 }
 
-static void turnOffTimer0(void) {
-	max = 0;
+static void turnOffTimer0(void) { //turn off led, buzzer timer
 	count = 0;
 	TIMER0->TCSR &= ~(1 << 30);
 	PC->DOUT |= (1<<12);
 	PB->DOUT |= (1<<11);
+}
+
+static void drawShipMap(void) {
+	LCD_clear(); 
+	int16_t x = 0;
+	int16_t y = 0;
+	for (int i = 0; i<8;i++) {
+		for(int j = 0; j<8;j++) {
+			if (shipCoordinates[i][j] == 1) {
+				printS_5x7(x, y, "x");
+			} else {
+				printS_5x7(x, y, "-");
+			}
+			x+=10;
+		}
+		y+=8;
+		x=0;
+	}
+	CLK_SysTickDelay(BOUNCING_DLY/2);
 }
 
 
