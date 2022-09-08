@@ -66,7 +66,8 @@ volatile int count = 0;
 volatile int max;			
 
 volatile char receivedByte;
-enum Boolean loadedMap = false;
+//enum Boolean loadedMap = false;
+volatile int charCount = 0;
 volatile int column = 0;
 volatile int row = 0;
 																			
@@ -83,7 +84,8 @@ void LCD_data(unsigned char temp);
 void LCD_clear(void);
 void LCD_SetAddress(uint8_t PageAddr, uint8_t ColumnAddr);
 static void show7Segment(int ledNo, int number);
-static void printLCD(char text[]);
+static void printTitle(int x, int y, char text[]);
+static void printLine(int x, int y, char text[]);
 static void search_col1(void);
 static void search_col2(void);
 static void search_col3(void);
@@ -123,34 +125,15 @@ int main(void)
 	while (1) {
 		switch(stage) {
 			case Welcome:
-				printLCD("Welcome to the game");
+				printTitle(38, 20, "Welcome!");
 				break;
 			case LoadMap:
-				while(!(UART0->FSR & (0x01 << 14))) {
-					receivedByte = UART0->DATA; // receive data
-					if (loadedMap == false) {loadedMap = true;}
-					if (receivedByte == '0') {
-						shipCoordinates[row][column] = 0;
-						column++;
-						if(column == 8) {
-							column = 0;
-							row++;
-						}
-					} else if (receivedByte == '1') {
-						shipCoordinates[row][column] = 1;
-						column++;
-						if(column == 8) {
-							column = 0;
-							row++;
-						}
-					}
-				}
-		
-				if (loadedMap == true) {
-					//printLCD("Loaded map successfully");
-					drawShipMap();
+				if (charCount == 0) {
+					printLine(15, 25, "Insert Your Map!");
+				} else if (charCount == 10) {
+					printLine(10, 25, "Load Map Successfully");
 				} else {
-					printLCD("Insert your map");
+					printTitle(45, 20, "loading!");
 				}
 				break;
 			case ChooseCoordinate:
@@ -170,7 +153,7 @@ int main(void)
 				drawMap();
 				break;
 			case GameOver:
-				printLCD("Game Over");
+				printTitle(32, 20, "Game Over");
 				break;
 			default:
 				break;
@@ -323,6 +306,13 @@ void UART0_Config(void) {
 	UART0->BAUD &= ~(0b11 << 28); // mode 0	
 	UART0->BAUD &= ~(0xFFFF << 0);
 	UART0->BAUD |= 142;
+	
+	//Configure interrupt
+	UART0->IER |= (1<<0);
+	UART0->FCR &= ~(0xF<<4); //RFITL 1 bytes
+	UART0->ISR |= (1<<0); //enable RDA_IF interrupt
+	NVIC->ISER[0] |= (1<<12); //enable interrupt at system source level
+	NVIC->IP[3] &= ~(0b11<<6); 
 }
 
 void SPI3_Config(void) {
@@ -423,7 +413,9 @@ void EINT1_IRQHandler(void){
 				stage = LoadMap;
 				break;
 			case LoadMap:
-				stage = ChooseCoordinate;
+				if (charCount != 0) {
+					stage = ChooseCoordinate;
+				}
 				break;
 			case ChooseCoordinate:
 				if (xCoordinate != 0 && yCoordinate != 0) {
@@ -454,6 +446,28 @@ void EINT1_IRQHandler(void){
 	PB->ISRC |= (1 << 15);
 }
 
+void UART02_IRQHandler(void)
+{
+	receivedByte = UART0->DATA; // receive data
+	//if (loadedMap == false) {loadedMap = true;}
+	if (receivedByte == '0') {
+		shipCoordinates[row][column] = 0;
+		column++;
+		if(column == 8) {
+			column = 0;
+			row++;
+		}
+	} else if (receivedByte == '1') {
+		shipCoordinates[row][column] = 1;
+		column++;
+		charCount++;
+		if(column == 8) {
+			column = 0;
+			row++;
+		}
+	}
+}
+
 //------------------------------------------Functions definition-----------------------------------------------------------
 static void show7Segment(int ledNo, int number) {
 	// Control which led to turn on
@@ -463,10 +477,16 @@ static void show7Segment(int ledNo, int number) {
 	PE->DOUT = pattern[number];
 }
 
-static void printLCD(char text[]) {
+static void printTitle(int x, int y, char text[]) {
 	CLK_SysTickDelay(BOUNCING_DLY);
 	LCD_clear(); 
-	print_Line(0, text);
+	printS(x, y, text);
+}
+
+static void printLine(int x, int y, char text[]) {
+	CLK_SysTickDelay(BOUNCING_DLY);
+	LCD_clear(); 
+	printS_5x7(x, y, text);
 }
 
 static void changeCoordinateValue(int number) {
@@ -615,9 +635,9 @@ static void resetGame(void) {
 	shootCounter[1] = 0;
 	
 	//reset map loading variables
-	loadedMap = false;
 	column = 0;
 	row = 0;
+	charCount = 0;
 }
 
 static void drawMap(void) {
