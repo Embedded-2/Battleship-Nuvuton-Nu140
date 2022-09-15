@@ -31,6 +31,9 @@ void LCD_data(unsigned char temp);
 void LCD_clear(void);
 void LCD_SetAddress(uint8_t PageAddr, uint8_t ColumnAddr);
 
+int checkLatitude(char word[]);
+int checkLongitude(char word[]);
+
 int main(void)
 {
 	PC->PMD &= ~(0b11<<24);
@@ -109,7 +112,7 @@ void System_Config(void) {
 	NVIC->ISER[0] |= 1<<8; //Timer 0 is given number 8 in the vecter table (section 5.2.7)
 	NVIC->IP[2] &= ~(0b11<<6); //Set priority level
 	
-	TIMER0->TCMPR = 3000000-1; // 1/(1/12MHz)
+	TIMER0->TCMPR = 2400000-1; // 0.2/(1/12MHz)
 	
 	TIMER0->TCSR |= (1 << 30);
 	
@@ -220,35 +223,45 @@ void LCD_SetAddress(uint8_t PageAddr, uint8_t ColumnAddr)
 }
 
 void UART02_IRQHandler(void){
-	//input = UART0->DATA;
 	character = UART0->DATA; //receive character
-	//strcpy(input, UART0->DATA);
-	if(character == 32){ // ' '
+	if(character == 32 || character == '\n'){ // ' '
 		strcpy(word,""); //reset word
-		wordCount++; //count word
-	} else if (character == '\n') {
-		strcpy(word, ""); //reset word
-		wordCount = 0;
 	} else {
 		strncat(word, &character, 1); //add character to current word
 	}
 	
-	if (wordCount == 2) {
-		strcpy(temp, word);
-	} else if (wordCount == 3) {
-		strcpy(showWord, temp); // 
-		strcat(showWord, " ");
-		//showWord[strlen(showWord)] = ' \0';
-		//showWord[strlen(showWord)+1] = '\0';
-		strcat(showWord, word);
+	if (checkLatitude(word) == 1) {
+		strcpy(temp, word);// Copy latitude to temp
+	} else if (checkLongitude(word) == 1) {
+		strcpy(showWord, temp); // COpy temp to showWord
+		strcat(showWord, " "); // Add space
+		strcat(showWord, word); // Add longtitude to showWord
 	}
 }
 
 void TMR0_IRQHandler(void) {
-	LCD_clear();
-	printS_5x7(0,0, showWord);
-	PC->DOUT ^= (1<<13);
-	TIMER0->TISR |= (1<<0); 
+	LCD_clear(); //reset LCD
+	printS_5x7(0,0, showWord); //display result to LCD
+	TIMER0->TISR |= (1<<0);  
+}
+
+int checkLatitude(char word[]) {
+	int size = strlen(word);
+	
+	if (size == 8 && word[0] == 'S') { //check if the string starts with 's' and size is 8 => longtitude
+		return 1;
+	}
+	return 0;
+}
+
+// 
+int checkLongitude(char word[]) { //check if the string starts with 's' and size is 8 => latitude
+	int size = strlen(word);
+	
+	if (size == 9 && word[0] == 'E') {
+		return 1;
+	}
+	return 0;
 }
 
 //------------------------------------------- main.c CODE ENDS ---------------------------------------------------------------------------
