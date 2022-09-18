@@ -1,4 +1,4 @@
-./objects/main.o: main.c C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdio.h \
+./objects/spi.o: C:\Keil_v5\Library\StdDriver\Source\spi.c \
   C:\Keil_v5\Library\NUC100Series\Include\NUC100Series.h \
   C:\Keil_v5\Library\CMSIS\Include\core_cm0.h \
   C:\Keil_v5\ARM\ARMCLANG\Bin\..\include\stdint.h \
@@ -25,5 +25,4 @@
   C:\Keil_v5\Library\StdDriver\Include\SC.h \
   C:\Keil_v5\Library\StdDriver\Include\PS2.h \
   C:\Keil_v5\Library\StdDriver\Include\CLK.h \
-  C:\Keil_v5\Library\StdDriver\Include\ACMP.h \
-  C:\Keil_v5\Library\NUC1xx-LB_002\Include\LCD.h
+  C:\Keil_v5\Library\StdDriver\Include\ACMP.h

@@ -49,7 +49,7 @@
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
           <OutputDirectory>.\Objects\</OutputDirectory>
-          <OutputName>lab2_exercise1</OutputName>
+          <OutputName>Final_ex1</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>0</CreateHexFile>
@@ -422,6 +422,16 @@
               <FileName>sys.c</FileName>
               <FileType>1</FileType>
               <FilePath>C:\Keil_v5\Library\StdDriver\Source\sys.c</FilePath>
+            </File>
+            <File>
+              <FileName>LCD.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>C:\Keil_v5\Library\NUC1xx-LB_002\Source\LCD.c</FilePath>
+            </File>
+            <File>
+              <FileName>spi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>C:\Keil_v5\Library\StdDriver\Source\spi.c</FilePath>
             </File>
           </Files>
         </Group>
