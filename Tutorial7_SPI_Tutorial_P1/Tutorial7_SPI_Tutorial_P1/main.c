@@ -39,21 +39,12 @@ int pattern[] = {
                 }; 
 enum Stage stage;
 enum CoordinateType currCoordinateType = x;
-volatile int xCoordinate = 0;
-volatile int yCoordinate = 0;
-volatile int shootCounter[] = {0,0};
+int xCoordinate = 0;
+int yCoordinate = 0;
+int shootCounter[] = {0,0};
 enum Boolean showU13 = true;
-volatile int hit = 0;
-volatile int shipCoordinates[8][8] = {{0, 0, 0, 0, 0, 0, 0, 0},
-																			{0, 1, 1, 0, 0, 0, 0, 0},
-																			{0, 0, 0, 0, 0, 0, 1, 0},
-																			{0, 0, 0, 0, 0, 0, 1, 0}, 
-																			{0, 0, 1, 1, 0, 0, 0, 0},
-																			{0, 0, 0, 0, 0, 0, 0, 0},
-																			{1, 1, 0, 0, 1, 0, 0, 0},
-																			{0, 0, 0, 0, 1, 0, 0, 0}};
-
-volatile int hitCoordinates[8][8] = {{0, 0, 0, 0, 0, 0, 0, 0},
+int hit = 0;
+int shipCoordinates[8][8] = {{0, 0, 0, 0, 0, 0, 0, 0},
 																			{0, 0, 0, 0, 0, 0, 0, 0},
 																			{0, 0, 0, 0, 0, 0, 0, 0},
 																			{0, 0, 0, 0, 0, 0, 0, 0}, 
@@ -62,14 +53,24 @@ volatile int hitCoordinates[8][8] = {{0, 0, 0, 0, 0, 0, 0, 0},
 																			{0, 0, 0, 0, 0, 0, 0, 0},
 																			{0, 0, 0, 0, 0, 0, 0, 0}};
 
-volatile int count = 0;
-volatile int max;			
+int hitCoordinates[8][8] = {{0, 0, 0, 0, 0, 0, 0, 0},
+																			{0, 0, 0, 0, 0, 0, 0, 0},
+																			{0, 0, 0, 0, 0, 0, 0, 0},
+																			{0, 0, 0, 0, 0, 0, 0, 0}, 
+																			{0, 0, 0, 0, 0, 0, 0, 0},
+																			{0, 0, 0, 0, 0, 0, 0, 0},
+																			{0, 0, 0, 0, 0, 0, 0, 0},
+																			{0, 0, 0, 0, 0, 0, 0, 0}};
 
-volatile char receivedByte;
+int count = 0;
+int max;			
+
+char receivedByte;
 //enum Boolean loadedMap = false;
-volatile int charCount = 0;
-volatile int column = 0;
-volatile int row = 0;
+int charCount = 0;
+int column = 0;
+int row = 0;
+enum Boolean insertMap = false;
 																			
 //--------------------functions declaration-------------------------------------
 void System_Config(void);
@@ -97,6 +98,8 @@ static void drawMap(void);
 static void checkAccuracy(void);
 static void turnOffTimer0(void);
 static void drawShipMap(void);
+static void checkCharCount(void);
+static int checkShipShunk(void);
 
 
 int main(void)
@@ -128,9 +131,11 @@ int main(void)
 				printTitle(38, 20, "Welcome!");
 				break;
 			case LoadMap:
-				if (charCount == 0) {
+				if (charCount == 10 && insertMap == false) {
+					printLine(5, 25, "Replay / insert new map");
+				} else if (insertMap == false) {
 					printLine(15, 25, "Insert Your Map!");
-				} else if (charCount == 10) {
+				} else if ((charCount == 10 || charCount == 20) && insertMap == true) {
 					printLine(10, 25, "Load Map Successfully");
 				} else {
 					printTitle(45, 20, "loading!");
@@ -138,6 +143,7 @@ int main(void)
 				break;
 			case ChooseCoordinate:
 				drawMap();
+				(currCoordinateType == x) ? (show7Segment(U11_SEG, xCoordinate)) : (show7Segment(U12_SEG, yCoordinate));
 				PA->DOUT &= ~(1<<3);
 				PA->DOUT &= ~(1<<4);
 				PA->DOUT &= ~(1<<5);
@@ -411,9 +417,10 @@ void EINT1_IRQHandler(void){
 			case Welcome:
 				resetGame();
 				stage = LoadMap;
+				checkCharCount();
 				break;
 			case LoadMap:
-				if (charCount != 0) {
+				if (charCount == 10 || charCount == 20) {
 					stage = ChooseCoordinate;
 				}
 				break;
@@ -427,7 +434,7 @@ void EINT1_IRQHandler(void){
 				turnOffTimer1();
 				resetCoordinate();
 				turnOffTimer0();
-				if((shootCounter[0] == 1 && shootCounter[1] == 6) || hit == 10) {
+				if((shootCounter[0] == 1 && shootCounter[1] == 6) || checkShipShunk() == 5) {
 					max = 10;
 					TIMER0->TCSR |= (1 << 30); //start timer 0
 					stage = GameOver;
@@ -449,7 +456,8 @@ void EINT1_IRQHandler(void){
 void UART02_IRQHandler(void)
 {
 	receivedByte = UART0->DATA; // receive data
-	//if (loadedMap == false) {loadedMap = true;}
+	//Flag when it is the last character
+	insertMap = true;
 	if (receivedByte == '0') {
 		shipCoordinates[row][column] = 0;
 		column++;
@@ -491,7 +499,6 @@ static void printLine(int x, int y, char text[]) {
 
 static void changeCoordinateValue(int number) {
 	CLK_SysTickDelay(BOUNCING_DLY);
-	(currCoordinateType == x) ? (show7Segment(U11_SEG, number)) : (show7Segment(U12_SEG, number));
 	(currCoordinateType == x) ? (xCoordinate = number) : (yCoordinate = number);
 }
 
@@ -626,7 +633,7 @@ static void resetGame(void) {
 	for (int i = 0; i<8;i++) {
 		for(int j = 0; j<8;j++) {
 			hitCoordinates[i][j] = 0;
-			shipCoordinates[i][j] = 0;
+			//shipCoordinates[i][j] = 0;
 		}
 	}
 	//reset number of hits and shoots
@@ -637,7 +644,7 @@ static void resetGame(void) {
 	//reset map loading variables
 	column = 0;
 	row = 0;
-	charCount = 0;
+	insertMap = false;
 }
 
 static void drawMap(void) {
@@ -694,6 +701,19 @@ static void drawShipMap(void) {
 	CLK_SysTickDelay(BOUNCING_DLY/2);
 }
 
+static void checkCharCount(void) {
+	charCount = 0;
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j< 8; j++) {
+			if (shipCoordinates[i][j] == 1) {
+				charCount++;
+			}
+		}
+	}
+}
 
+static int checkShipShunk(void) {
+	return hit/2;
+}
 
 //------------------------------------------- main.c CODE ENDS ---------------------------------------------------------------------------

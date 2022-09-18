@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\Tutorial7_SPI_P1.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\Tutorial7_SPI_P1.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6140002: Last Updated: Thu Sep  8 17:08:07 2022
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6140002: Last Updated: Sun Sep 18 11:56:05 2022
 <BR><P>
 <H3>Maximum Stack Usage =         88 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -381,7 +381,7 @@ Global Symbols
 
 <P><STRONG><a name="[7e]"></a>__semihosting_library_function</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, indicate_semi.o(.text), UNUSED)
 
-<P><STRONG><a name="[9]"></a>EINT1_IRQHandler</STRONG> (Thumb, 328 bytes, Stack size 24 bytes, main.o(.text.EINT1_IRQHandler))
+<P><STRONG><a name="[9]"></a>EINT1_IRQHandler</STRONG> (Thumb, 340 bytes, Stack size 24 bytes, main.o(.text.EINT1_IRQHandler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = EINT1_IRQHandler
 </UL>
 <BR>[Calls]<UL><LI><a href="#[3b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;turnOffTimer0
@@ -446,21 +446,23 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[32]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[e]"></a>TMR0_IRQHandler</STRONG> (Thumb, 92 bytes, Stack size 8 bytes, main.o(.text.TMR0_IRQHandler))
+<P><STRONG><a name="[e]"></a>TMR0_IRQHandler</STRONG> (Thumb, 84 bytes, Stack size 8 bytes, main.o(.text.TMR0_IRQHandler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = TMR0_IRQHandler
 </UL>
 <BR>[Calls]<UL><LI><a href="#[3b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;turnOffTimer0
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_nuc100series.o(RESET)
 </UL>
-<P><STRONG><a name="[f]"></a>TMR1_IRQHandler</STRONG> (Thumb, 56 bytes, Stack size 16 bytes, main.o(.text.TMR1_IRQHandler))
+<P><STRONG><a name="[f]"></a>TMR1_IRQHandler</STRONG> (Thumb, 60 bytes, Stack size 16 bytes, main.o(.text.TMR1_IRQHandler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = TMR1_IRQHandler &rArr; show7Segment
 </UL>
 <BR>[Calls]<UL><LI><a href="#[3f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;show7Segment
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_nuc100series.o(RESET)
 </UL>
-<P><STRONG><a name="[12]"></a>UART02_IRQHandler</STRONG> (Thumb, 104 bytes, Stack size 0 bytes, main.o(.text.UART02_IRQHandler))
+<P><STRONG><a name="[12]"></a>UART02_IRQHandler</STRONG> (Thumb, 96 bytes, Stack size 16 bytes, main.o(.text.UART02_IRQHandler))
+<BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = UART02_IRQHandler
+</UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_nuc100series.o(RESET)
 </UL>
 <P><STRONG><a name="[47]"></a>UART0_Config</STRONG> (Thumb, 192 bytes, Stack size 16 bytes, main.o(.text.UART0_Config))
@@ -483,7 +485,7 @@ Global Symbols
 <LI><a href="#[4c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;printC
 </UL>
 
-<P><STRONG><a name="[32]"></a>main</STRONG> (Thumb, 576 bytes, Stack size 0 bytes, main.o(.text.main))
+<P><STRONG><a name="[32]"></a>main</STRONG> (Thumb, 664 bytes, Stack size 0 bytes, main.o(.text.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 88<LI>Call Chain = main &rArr; drawMap &rArr; printS_5x7 &rArr; printC_5x7 &rArr; lcdSetAddr
 </UL>
 <BR>[Calls]<UL><LI><a href="#[47]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART0_Config
@@ -493,6 +495,7 @@ Global Symbols
 <LI><a href="#[49]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LCD_start
 <LI><a href="#[3c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;LCD_clear
 <LI><a href="#[45]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Input_Config
+<LI><a href="#[3f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;show7Segment
 <LI><a href="#[4a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;printTitle
 <LI><a href="#[4b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;printLine
 <LI><a href="#[42]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;drawMap
@@ -523,8 +526,8 @@ Global Symbols
 <P><STRONG><a name="[50]"></a>printS</STRONG> (Thumb, 42 bytes, Stack size 24 bytes, lcd.o(.text.printS))
 <BR><BR>[Stack]<UL><LI>Max Depth = 64<LI>Call Chain = printS &rArr; printC &rArr; lcdSetAddr
 </UL>
-<BR>[Calls]<UL><LI><a href="#[51]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
-<LI><a href="#[4c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;printC
+<BR>[Calls]<UL><LI><a href="#[4c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;printC
+<LI><a href="#[51]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
 </UL>
 <BR>[Called By]<UL><LI><a href="#[4a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;printTitle
 </UL>
@@ -532,8 +535,8 @@ Global Symbols
 <P><STRONG><a name="[43]"></a>printS_5x7</STRONG> (Thumb, 40 bytes, Stack size 24 bytes, lcd.o(.text.printS_5x7))
 <BR><BR>[Stack]<UL><LI>Max Depth = 64<LI>Call Chain = printS_5x7 &rArr; printC_5x7 &rArr; lcdSetAddr
 </UL>
-<BR>[Calls]<UL><LI><a href="#[51]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
-<LI><a href="#[4f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;printC_5x7
+<BR>[Calls]<UL><LI><a href="#[4f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;printC_5x7
+<LI><a href="#[51]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;strlen
 </UL>
 <BR>[Called By]<UL><LI><a href="#[4b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;printLine
 <LI><a href="#[42]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;drawMap
@@ -557,11 +560,10 @@ Local Symbols
 <LI><a href="#[40]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;changeCoordinateValue
 </UL>
 
-<P><STRONG><a name="[40]"></a>changeCoordinateValue</STRONG> (Thumb, 48 bytes, Stack size 24 bytes, main.o(.text.changeCoordinateValue))
-<BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = changeCoordinateValue &rArr; show7Segment
+<P><STRONG><a name="[40]"></a>changeCoordinateValue</STRONG> (Thumb, 32 bytes, Stack size 8 bytes, main.o(.text.changeCoordinateValue))
+<BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = changeCoordinateValue
 </UL>
-<BR>[Calls]<UL><LI><a href="#[3f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;show7Segment
-<LI><a href="#[41]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CLK_SysTickDelay
+<BR>[Calls]<UL><LI><a href="#[41]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CLK_SysTickDelay
 </UL>
 <BR>[Called By]<UL><LI><a href="#[32]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
@@ -599,8 +601,8 @@ Local Symbols
 <P><STRONG><a name="[3f]"></a>show7Segment</STRONG> (Thumb, 44 bytes, Stack size 8 bytes, main.o(.text.show7Segment))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = show7Segment
 </UL>
-<BR>[Called By]<UL><LI><a href="#[f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TMR1_IRQHandler
-<LI><a href="#[40]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;changeCoordinateValue
+<BR>[Called By]<UL><LI><a href="#[32]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<LI><a href="#[f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TMR1_IRQHandler
 </UL>
 
 <P><STRONG><a name="[3b]"></a>turnOffTimer0</STRONG> (Thumb, 52 bytes, Stack size 0 bytes, main.o(.text.turnOffTimer0))
