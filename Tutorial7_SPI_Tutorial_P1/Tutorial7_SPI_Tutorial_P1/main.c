@@ -97,7 +97,6 @@ static void resetGame(void);
 static void drawMap(void);
 static void checkAccuracy(void);
 static void turnOffTimer0(void);
-static void drawShipMap(void);
 static void checkCharCount(void);
 static int checkShipShunk(void);
 
@@ -680,25 +679,6 @@ static void turnOffTimer0(void) { //turn off led, buzzer timer
 	TIMER0->TCSR &= ~(1 << 30);
 	PC->DOUT |= (1<<12);
 	PB->DOUT |= (1<<11);
-}
-
-static void drawShipMap(void) {
-	LCD_clear(); 
-	int16_t x = 0;
-	int16_t y = 0;
-	for (int i = 0; i<8;i++) {
-		for(int j = 0; j<8;j++) {
-			if (shipCoordinates[i][j] == 1) {
-				printS_5x7(x, y, "x");
-			} else {
-				printS_5x7(x, y, "-");
-			}
-			x+=10;
-		}
-		y+=8;
-		x=0;
-	}
-	CLK_SysTickDelay(BOUNCING_DLY/2);
 }
 
 static void checkCharCount(void) {
