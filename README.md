@@ -9,7 +9,6 @@ In this project, we use C as the main programming language. Moreover, build-in f
 - Leds, buttons, LCD (build-in component)
 - Interrupt
 - Uart to send signals from another board or computer
-Moreover, build-in functions is strictly prohibited when we are required to configure each bit to enable and utilize board components. 
 ## Game rules
 ## Installation 
 1. Have Nuvuton Nu140 (minimum requirement :v)
