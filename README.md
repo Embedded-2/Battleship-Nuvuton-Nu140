@@ -4,7 +4,7 @@ An academic embedded project which which consists of 3 exercises:
 1. 
 2. 
 3. Battleship Game
-In this project, we use C as the main programming language. We had to work with several basic component of the board:
+In this project, we use C as the main programming language. Moreover, build-in functions is strictly prohibited when we are required to configure each bit to enable and utilize board components. Components which we had to work on:
 - Timer and sysTick
 - Leds, buttons, LCD (build-in component)
 - Interrupt
